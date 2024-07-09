@@ -1,0 +1,89 @@
+# Install necessary packages if not already installed
+# install.packages("e1071")
+# install.packages("caTools")
+# install.packages("ggplot2")
+# install.packages("caret")
+
+# Load necessary libraries
+library(e1071)
+library(caTools)
+library(ggplot2)
+library(caret)
+
+# Load the dataset
+data <- read.csv("drug200.csv")
+
+# Convert categorical variables to factors
+data$Sex <- as.factor(data$Sex)
+data$BP <- as.factor(data$BP)
+data$Cholesterol <- as.factor(data$Cholesterol)
+data$Drug <- as.factor(data$Drug)
+
+# Summary statistics
+summary(data)
+
+# Histograms for input variables
+ggplot(data, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Age", x = "Age", y = "Count") +
+  theme_minimal()
+
+ggplot(data, aes(x = Na_to_K)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Na_to_K", x = "Na_to_K", y = "Count") +
+  theme_minimal()
+
+ggplot(data, aes(x = Sex)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Sex", x = "Sex", y = "Count") +
+  theme_minimal()
+
+ggplot(data, aes(x = BP)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  labs(title = "Histogram of BP", x = "BP", y = "Count") +
+  theme_minimal()
+
+ggplot(data, aes(x = Cholesterol)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Cholesterol", x = "Cholesterol", y = "Count") +
+  theme_minimal()
+
+# Split the dataset into training and testing sets
+set.seed(123)
+split <- sample.split(data$Drug, SplitRatio = 0.7)
+training_set <- subset(data, split == TRUE)
+testing_set <- subset(data, split == FALSE)
+
+# Train the SVM model
+svm_model <- svm(Drug ~ Age + Sex + BP + Cholesterol + Na_to_K, data = training_set, type = 'C-classification', kernel = 'linear')
+
+# Make predictions on the test set
+predictions <- predict(svm_model, newdata = testing_set)
+
+# Evaluate the model: Accuracy score
+accuracy <- sum(predictions == testing_set$Drug) / nrow(testing_set)
+print(paste("Accuracy:", accuracy))
+
+# Confusion matrix
+conf_matrix <- confusionMatrix(predictions, testing_set$Drug)
+print(conf_matrix)
+
+# Visualize the confusion matrix
+conf_matrix_plot <- as.data.frame(conf_matrix$table)
+ggplot(conf_matrix_plot, aes(Reference, Prediction)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(title = "Confusion Matrix", x = "Actual", y = "Predicted") +
+  theme_minimal()
+
+# Visualize the results: Plot SVM predictions
+ggplot(testing_set, aes(x = Age, y = Na_to_K, color = predictions)) +
+  geom_point() +
+  labs(title = "SVM Predictions on Testing Set", x = "Age", y = "Na_to_K") +
+  theme_minimal()
+
+# Plot a histogram of the predicted drug types
+ggplot(data.frame(predictions), aes(x = predictions)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Histogram of Predicted Drug Types", x = "Predicted Drug Type", y = "Count") +
+  theme_minimal()
